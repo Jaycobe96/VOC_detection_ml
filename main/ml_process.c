@@ -38,7 +38,7 @@ void ml_process_thd_start(void) {
 
 static void *ml_process(void* arg) {
 
-	const size_t c_samples_trig = 6;
+	const size_t c_samples_trig = 5;
 	const int delay_ms_profile[10] = {300, 300, 300, 300, 300, 300, 300, 300, 300, 300};
 	const int delay_r_err = 100;
 
@@ -72,7 +72,7 @@ static void *ml_process(void* arg) {
 			A_data.n_len = 4;
 			c_samples_unhandled = 0;
 
-			// Process machine learning
+			// data normalization
 			matrix_data A_norm_data = matrix_data_mem_copy(A_data);
 			vector_data v_diff = vector_data_mem_init(A_norm_data.n_len, 0);
 			ml_matrix_normalize(A_norm_data, &v_diff);
@@ -81,47 +81,27 @@ static void *ml_process(void* arg) {
 			matrix_print(A_norm_data, "A_norm");
 			vector_print(v_diff, "attr_diff");
 
-			matrix_data A_norm_t_data = matrix_transpose(A_norm_data, 1);
+			matrix_data Test_data = matrix_data_mem_init(3, 3, 0);
+			matrix_t test = Test_data.data;
+			test[0][0] = 12.0;
+			test[0][1] = -51.0;
+			test[0][2] = 4.0;
+			test[1][0] = 6.0;
+			test[1][1] = 167.0;
+			test[1][2] = -68.0;
+			test[2][0] = -4.0;
+			test[2][1] = 24.0;
+			test[2][2] = -41.0;
 
-			matrix_data V_data = matrix_mult(A_norm_t_data, A_norm_data);
-			matrix_print(V_data, "V");
 
-			matrix_data D_data = ml_tridiagonalization(V_data);
+			matrix_data D_data = ml_calc_q(A_norm_data);
 			matrix_print(D_data, "D");
 
 			matrix_free(A_data);
 			matrix_free(A_norm_data);
-			matrix_free(A_norm_t_data);
-			matrix_free(V_data);
+			matrix_free(D_data);
 			vector_free(v_diff);
 		}
 	}
 	return NULL;
 }
-
-/*
- * 		// mult test
-		matrix_t A = matrix_mem_init(3, 2, 0);
-		matrix_t B = matrix_mem_init(2, 3, 0);
-		A[0][0] = 1.0;
-		A[0][1] = 2.0;
-		A[0][2] = 3.0;
-
-		A[1][0] = 4.0;
-		A[1][1] = 5.0;
-		A[1][2] = 6.0;
-
-		B[0][0] = 10.0;
-		B[1][0] = 20.0;
-		B[2][0] = 30.0;
-
-		B[0][1] = 11.0;
-		B[1][1] = 21.0;
-		B[2][1] = 31.0;
-
-		matrix_data A_data = matrix_to_matrix_data(A, 3, 2);
-		matrix_data B_data = matrix_to_matrix_data(B, 2, 3);
-
-		matrix_data C_data = matrix_mult(A_data, B_data);
-		matrix_print(C_data);
- */

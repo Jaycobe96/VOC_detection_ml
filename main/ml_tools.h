@@ -20,6 +20,7 @@ typedef struct {
 }DVt;
 
 matrix_data ml_matrix_normalize(matrix_data A_data, vector_data* v_diff);
+matrix_data ml_calc_q(matrix_data A_data);
 matrix_data ml_tridiagonalization(matrix_data A_data);
 
 

@@ -12,7 +12,7 @@
 #include "esp_pthread.h"
 #include "pthread.h"
 
-#define SQUARE_ROOT_PREC (0.00001f)
+#define SQUARE_ROOT_PREC (0.000001f)
 
 static ml_data_type ml_abs(ml_data_type x);
 static ml_data_type ml_sgn(ml_data_type x);
@@ -93,6 +93,63 @@ matrix_data ml_matrix_normalize(matrix_data A_data, vector_data *v_diff) {
 	}
 
 	return A_data;
+}
+
+vector_data ml_proj(vector_data u, vector_data a) {
+	ml_data_type scalar = vector_mult(u, a) / vector_mult(u, u);
+	return vector_mult_scalar(scalar, u, 1);
+}
+
+// https://en.wikipedia.org/wiki/QR_decomposition
+matrix_data ml_calc_q(matrix_data A_data) {
+	matrix_data U_data = matrix_data_mem_init(A_data.m_len, A_data.n_len, 0);
+	matrix_t U = U_data.data;
+	matrix_data A_t_data = matrix_transpose(A_data, 1);
+	matrix_t A = A_t_data.data;
+
+	//gram-schmidt process (row-wise)
+
+	// first iteration
+	memcpy(U[0], A[0], U_data.n_len * sizeof(ml_data_type));
+
+	// iterations
+	for(size_t i = 1; i < U_data.m_len; i++) {
+
+		for(size_t j = 1; j <= i; j++) {
+			vector_data u_data; u_data.n_len = U_data.n_len; u_data.data = U_data.data[j-1];
+			vector_data a_data; a_data.n_len = U_data.n_len; a_data.data = A[i];
+			vector_data a_proj_data = ml_proj(u_data, a_data);
+			vector_t a_proj = a_proj_data.data;
+
+			// subtraction
+			for(size_t u = 0; u < U_data.n_len; u++) {
+				U[i][u] -= a_proj[u];
+			}
+
+			vector_free(a_proj_data);
+		}
+		// addition
+		for(size_t u = 0; u < U_data.n_len; u++) {
+			U[i][u] += A[i][u];
+		}
+	}
+
+	matrix_print(U_data, "U_data");
+
+	// find max for euclidean norm
+	for(size_t i = 0; i < U_data.m_len; i++) {
+		ml_data_type sum = 0;
+		for(size_t u = 0; u < U_data.n_len; u++) {
+			sum += U[i][u]*U[i][u];
+		}
+
+		ml_data_type eucl = ml_sqrt(sum);
+		// normalize
+		for(size_t u = 0; u < U_data.n_len; u++) {
+			U[i][u] = U[i][u] / eucl;
+		}
+	}
+	return U_data;
 }
 
 matrix_data ml_tridiagonalization(matrix_data A_data) {
