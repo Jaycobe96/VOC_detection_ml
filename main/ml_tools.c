@@ -100,8 +100,30 @@ vector_data ml_proj(vector_data u, vector_data a) {
 	return vector_mult_scalar(scalar, u, 1);
 }
 
+
+// QR decomposition
 // https://en.wikipedia.org/wiki/QR_decomposition
-matrix_data ml_calc_q(matrix_data A_data) {
+matrix_data ml_calc_R(matrix_data Q_data, matrix_data A_data) {
+	matrix_data A_t_data = matrix_transpose(A_data, 1);
+	matrix_data Q_t_data = matrix_transpose(Q_data, 1);
+	matrix_data R_data = matrix_data_mem_init(A_data.n_len, A_data.n_len, 0);
+	matrix_t Q_t = Q_t_data.data;
+	matrix_t A_t = A_t_data.data;
+	matrix_t R = R_data.data;
+
+	for(size_t i = 0; i < Q_t_data.m_len; i++) {
+		for(size_t u = 0; u < Q_t_data.m_len - i; u++) {
+			R[i][u] += vector_mult(vector_to_vector_data((vector_t)Q_t[i], A_data.m_len),
+					vector_to_vector_data(A_t[u], A_data.m_len));
+		}
+	}
+	return R_data;
+}
+
+/**
+ * Returns : U matrix
+ */
+matrix_data ml_calc_Q(matrix_data A_data) {
 	matrix_data U_data = matrix_data_mem_init(A_data.m_len, A_data.n_len, 0);
 	matrix_t U = U_data.data;
 	matrix_data A_t_data = matrix_transpose(A_data, 1);
@@ -134,9 +156,7 @@ matrix_data ml_calc_q(matrix_data A_data) {
 		}
 	}
 
-	matrix_print(U_data, "U_data");
-
-	// find max for euclidean norm
+	//euclidean norm
 	for(size_t i = 0; i < U_data.m_len; i++) {
 		ml_data_type sum = 0;
 		for(size_t u = 0; u < U_data.n_len; u++) {
@@ -149,7 +169,10 @@ matrix_data ml_calc_q(matrix_data A_data) {
 			U[i][u] = U[i][u] / eucl;
 		}
 	}
-	return U_data;
+
+	matrix_data ret = matrix_transpose(U_data, 1);
+	matrix_free(U_data);
+	return ret;
 }
 
 matrix_data ml_tridiagonalization(matrix_data A_data) {

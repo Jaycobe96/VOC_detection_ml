@@ -94,13 +94,17 @@ static void *ml_process(void* arg) {
 			test[2][2] = -41.0;
 
 
-			matrix_data D_data = ml_calc_q(A_norm_data);
-			matrix_print(D_data, "D");
+			matrix_data Q_data = ml_calc_Q(Test_data);
+			matrix_print(Q_data, "Q");
+
+			matrix_data R_data = ml_calc_R(Q_data, Test_data);
+			matrix_print(R_data, "R");
 
 			matrix_free(A_data);
 			matrix_free(A_norm_data);
-			matrix_free(D_data);
 			vector_free(v_diff);
+			matrix_free(Q_data);
+			matrix_free(R_data);
 		}
 	}
 	return NULL;
