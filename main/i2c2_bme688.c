@@ -297,7 +297,9 @@ uint8_t bme688_routine(uint8_t profile) {
 			calc_gas_res = calc_gas_res * 100;
 		 	 */
 			new_sample.gas_res_now[profile_read] = (ml_data_type) calc_gas_res;
-			printf("p%u: %u\n", profile_read, calc_gas_res);
+
+			// UNCOMMENT FOR gas output in terminal
+			//printf("p%u: %u\n", profile_read, calc_gas_res);
 	}
 
 		// update all data on successful data read

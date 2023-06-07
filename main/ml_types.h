@@ -11,7 +11,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-typedef double ml_data_type;
+typedef float ml_data_type;
 typedef ml_data_type* vector_t;
 typedef ml_data_type** matrix_t;
 
