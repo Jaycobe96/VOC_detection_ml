@@ -38,7 +38,7 @@ void ml_process_thd_start(void) {
 
 static void *ml_process(void* arg) {
 
-	const size_t c_samples_trig = 5;
+	const size_t c_samples_trig = 2;
 	const int delay_ms_profile[10] = {300, 300, 300, 300, 300, 300, 300, 300, 300, 300};
 	const int delay_r_err = 100;
 
@@ -69,17 +69,15 @@ static void *ml_process(void* arg) {
 		if(c_samples_unhandled == c_samples_trig) {
 			// Collect all samples
 			matrix_data A_data = ml_sampler_data_collect();
-			A_data.n_len = 4;
+			//A_data.n_len = 4;
 			c_samples_unhandled = 0;
 
 			// data normalization
 			matrix_data A_norm_data = matrix_data_mem_copy(A_data);
-			vector_data v_diff = vector_data_mem_init(A_norm_data.n_len, 0);
-			ml_matrix_normalize(A_norm_data, &v_diff);
+			ml_matrix_normalize(A_norm_data);
 
 			matrix_print(A_data, "A");
 			matrix_print(A_norm_data, "A_norm");
-			vector_print(v_diff, "attr_diff");
 
 			matrix_data Test_data = matrix_data_mem_init(3, 3, 0);
 			matrix_t test = Test_data.data;
@@ -93,18 +91,41 @@ static void *ml_process(void* arg) {
 			test[2][1] = 24.0;
 			test[2][2] = -41.0;
 
-
-			matrix_data Q_data = ml_calc_Q(Test_data);
+			/*matrix_data At_data = matrix_transpose(A_norm_data, 1);
+			//matrix_data AtA_data = matrix_mult_scalar(1.0f/(ml_data_type)A_norm_data.n_len, matrix_mult(At_data, A_norm_data), 0);
+			matrix_data AtA_data = matrix_mult(At_data, A_norm_data);
+			matrix_print(AtA_data, "AtA");
+			matrix_data Q_data = ml_calc_Q(AtA_data);
 			matrix_print(Q_data, "Q");
+			matrix_data D_data = matrix_data_mem_init(Q_data.n_len, Q_data.m_len, 0);
+			matrix_t D = D_data.data;
+			matrix_data R_data = ml_calc_R(Q_data, AtA_data);
+			matrix_t R = R_data.data;
+			for(size_t i = 0; i < Q_data.n_len; i++) {
+				D[i][i] = R[i][i];
+			}*/
+			ml_svd(Test_data);
+			//matrix_print(D_data, "D");
 
-			matrix_data R_data = ml_calc_R(Q_data, Test_data);
-			matrix_print(R_data, "R");
+
+			//matrix_data R_data = ml_calc_R(Q_data, A_norm_data);
+			//matrix_data R_t_data = matrix_transpose(R_data, 1);
+			//matrix_print(R_data, "R");
+			//matrix_data RtR_data = matrix_mult(R_t_data, R_data);
+			//matrix_print(RtR_data, "RtR");
+			//matrix_data TD_data = ml_tridiagonalization(RtR_data);
+			//matrix_print(TD_data, "TD");
 
 			matrix_free(A_data);
 			matrix_free(A_norm_data);
-			vector_free(v_diff);
-			matrix_free(Q_data);
-			matrix_free(R_data);
+			//matrix_free(Q_data);
+			//matrix_free(D_data);
+			//matrix_free(AtA_data);
+			//matrix_free(R_data);
+			//matrix_free(R_data);
+			//matrix_free(R_t_data);
+			//matrix_free(RtR_data);
+//			matrix_free(Test_data);
 		}
 	}
 	return NULL;

@@ -24,17 +24,21 @@ matrix_data matrix_to_matrix_data(matrix_t A, size_t n_len, size_t m_len) {
 void matrix_print(matrix_data A_data, const char* A_name) {
 	printf("%s: [\n", A_name);
 	for(size_t i = 0; i < A_data.m_len; i++) {
+		printf("[");
 		for (size_t u = 0; u < A_data.n_len; u++) {
-			printf("%.3f\t", A_data.data[i][u]);
+			printf("%.3f", A_data.data[i][u]);
+			if(u < A_data.n_len - 1) {
+				printf(",\t");
+			}
 		}
-		printf(" \n");
+		printf("],\n");
 	}
 	printf("]\n");
 }
 
 void matrix_free(matrix_data A_data) {
-	for(size_t i = 0; i < A_data.m_len; i++) {
-		free(A_data.data[i]);
+	for(size_t i =  A_data.m_len; i > 0; i--) {
+		free(A_data.data[i-1]);
 	}
 	free(A_data.data);
 }
@@ -160,6 +164,21 @@ matrix_data matrix_transpose(matrix_data A_data, uint8_t copy) {
 	return A_data;
 }
 
+matrix_data matrix_subtract(matrix_data A_data, matrix_data B_data) {
+	if(A_data.n_len != B_data.n_len || A_data.m_len != B_data.m_len) {
+		printf("matrix_mult: A_N must be equal B_M\n");
+		return A_data;
+	}
+	matrix_t A = A_data.data;
+	matrix_t B = B_data.data;
+	for(size_t u = 0; u < A_data.m_len; u++) {
+		for(size_t i = 0; i < A_data.n_len; i++) {
+			A[u][i] -= B[u][i];
+		}
+	}
+	return A_data;
+}
+
 matrix_data matrix_mult(matrix_data A_data, matrix_data B_data) {
 	if(A_data.n_len != B_data.m_len) {
 		printf("matrix_mult: A_N must be equal B_M\n");
@@ -167,18 +186,18 @@ matrix_data matrix_mult(matrix_data A_data, matrix_data B_data) {
 	}
 	matrix_t A = A_data.data;
 	matrix_t B = B_data.data;
-	matrix_t C = matrix_mem_init(A_data.m_len, B_data.n_len, 0);
+	matrix_t C = matrix_mem_init(B_data.n_len, A_data.m_len, 0);
 
 	for(size_t u = 0; u < B_data.n_len; u++) {
 		for(size_t i = 0; i < A_data.m_len; i++) {
 			ml_data_type sum = 0.0;
-			for(size_t j = 0; j < B_data.m_len; j++) {
+			for(size_t j = 0; j < A_data.n_len; j++) {
 				sum += A[i][j] * B[j][u];
 			}
 		C[i][u] = sum;
 		}
 	}
-	matrix_data C_data; C_data.n_len = A_data.m_len; C_data.m_len = B_data.n_len;
+	matrix_data C_data; C_data.n_len = B_data.n_len; C_data.m_len = A_data.m_len;
 	C_data.data = C;
 	return C_data;
 }
