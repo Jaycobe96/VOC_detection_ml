@@ -26,6 +26,9 @@ void matrix_print(matrix_data A_data, const char* A_name) {
 	for(size_t i = 0; i < A_data.m_len; i++) {
 		printf("[");
 		for (size_t u = 0; u < A_data.n_len; u++) {
+			if(A_data.data[i][u] >= 0.0) {
+				printf(" ");
+			}
 			printf("%.3f", A_data.data[i][u]);
 			if(u < A_data.n_len - 1) {
 				printf(",\t");

@@ -38,24 +38,38 @@ void ml_process_thd_start(void) {
 
 static void *ml_process(void* arg) {
 
-	const size_t c_samples_trig = 200;
+	const size_t c_samples_trig = 20;
+	const size_t c_samples_omit_trig = 2;
 	const int delay_ms_profile[10] = {300, 300, 300, 300, 300, 300, 300, 300, 300, 300};
 	const int delay_r_err = 100;
+	const size_t sample_every = 1;
 
 	uint8_t c_profile = 0;
 	size_t c_samples_unhandled = 0;
+	size_t c_samples_omitted = 0;
+	size_t c_samples_every = 0;
 	// initialize with 100kB data buffer
 	ml_sampler_init(10, 100000);
 	for(;;) {
 		if(bme688_routine(c_profile)){
 			// on last round of reading from profiles, push data for machine learning processing
 			if(c_profile == 9) {
-				if(!ml_sampler_data_push(bme688_get_p_gas())) {
-					printf("Failed to save data\n");
-				} else {
-					c_samples_unhandled++;
-				}
 
+				// omit first c_samples_omit_trig samples
+				if(c_samples_omitted >= c_samples_omit_trig) {
+					c_samples_every++;
+					if(c_samples_every >= sample_every) {
+						c_samples_every = 0;
+						if(!ml_sampler_data_push(bme688_get_p_gas())) {
+							printf("Failed to save data\n");
+						} else {
+							c_samples_unhandled++;
+						}
+					}
+				} else {
+					c_samples_every++;
+					c_samples_omitted++;
+				}
 			}
 
 			vTaskDelay(delay_ms_profile[c_profile] / portTICK_PERIOD_MS);
@@ -87,7 +101,39 @@ static void *ml_process(void* arg) {
 			test[2][1] = 24.0;
 			test[2][2] = -41.0;
 
-			ml_svd(A_norm_data, NULL, NULL, NULL);
+			matrix_print(A_data, "A");
+			matrix_print(A_norm_data, "A_norm");
+			matrix_data A_norm_cpy = matrix_data_mem_copy(A_norm_data);
+
+			matrix_data Q = ml_calc_Q(A_norm_data);
+			matrix_data R = ml_calc_R(Q, A_norm_data);
+
+			matrix_print(Q, "Q");
+			matrix_print(R, "R");
+
+			svd_uwv svd_ret = ml_svd(A_norm_data);
+			svd_uwv svd_ret_R = ml_svd(R);
+
+			matrix_print(svd_ret.U, "U");
+			vector_print(svd_ret.W, "W");
+			matrix_print(svd_ret.V, "V");
+
+			matrix_print(svd_ret_R.U, "Ur");
+			vector_print(svd_ret_R.W, "Wr");
+			matrix_print(svd_ret_R.V, "Vr");
+
+			matrix_data V_t = matrix_transpose(svd_ret.V, 1);
+			matrix_data P_axis = ml_project_axis(A_norm_cpy, svd_ret.V);
+
+			//matrix_data P_T_axis = matrix_transpose(P_axis, 1);
+			matrix_print(P_axis, "Axis");
+
+			vector_free(svd_ret.W);
+			matrix_free(svd_ret.V);
+			matrix_free(P_axis);
+			matrix_free(V_t);
+			matrix_free(Q);
+			matrix_free(R);
 
 			matrix_free(A_data);
 			matrix_free(A_norm_data);

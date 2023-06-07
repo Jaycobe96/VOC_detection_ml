@@ -26,6 +26,8 @@ static int iminarg1,iminarg2;
 
 #define SIGN(a,b) ((b) >= 0.0 ? fabs(a) : -fabs(a))
 
+static vector_data ml_proj(vector_data u, vector_data a);
+static void qrdcmp(float **a, int n, float *c, float *d, int *sing);
 static void svdcmp(float **a, int m, int n, float w[], float **v);
 
 static float pythag(float a, float b) {
@@ -38,11 +40,99 @@ static float pythag(float a, float b) {
 		return (absb == 0.0 ? 0.0 : absb * sqrt(1.0 + SQR(absa / absb)));
 }
 
+static vector_data ml_proj(vector_data u, vector_data a) {
+	ml_data_type scalar = vector_mult(u, a) / vector_mult(u, u);
+	return vector_mult_scalar(scalar, u, 1);
+}
+
+// QR decomposition
+// https://en.wikipedia.org/wiki/QR_decomposition
+matrix_data ml_calc_R(matrix_data Q_data, matrix_data A_data) {
+	matrix_data A_t_data = matrix_transpose(A_data, 1);
+	matrix_data Q_t_data = matrix_transpose(Q_data, 1);
+	matrix_data R_data = matrix_data_mem_init(A_data.n_len, A_data.n_len, 0);
+	matrix_t Q_t = Q_t_data.data;
+	matrix_t A_t = A_t_data.data;
+	matrix_t R = R_data.data;
+
+	for(size_t i = 0; i < Q_t_data.m_len; i++) {
+		for(size_t u = i; u < Q_t_data.m_len; u++) {
+			R[i][u] += vector_mult(vector_to_vector_data((vector_t)Q_t[i], Q_t_data.n_len),
+					vector_to_vector_data(A_t[u], A_t_data.n_len));
+		}
+	}
+	matrix_free(A_t_data);
+	matrix_free(Q_t_data);
+	return R_data;
+}
+
+/**
+ * Returns : U matrix
+ */
+matrix_data ml_calc_Q(matrix_data A_data) {
+	matrix_data U_data = matrix_data_mem_init(A_data.m_len, A_data.n_len, 0);
+	matrix_t U = U_data.data;
+	matrix_data A_t_data = matrix_transpose(A_data, 1);
+	matrix_t A_t = A_t_data.data;
+
+	//gram-schmidt process (row-wise)
+
+	// first iteration
+	memcpy(U[0], A_t[0], U_data.n_len * sizeof(ml_data_type));
+
+	// iterations
+	for(size_t i = 1; i < U_data.m_len; i++) {
+
+		for(size_t j = 1; j <= i; j++) {
+			vector_data u_data; u_data.n_len = U_data.n_len; u_data.data = U_data.data[j-1];
+			vector_data a_data; a_data.n_len = A_t_data.n_len; a_data.data = A_t[i];
+			vector_data a_proj_data = ml_proj(u_data, a_data);
+			vector_t a_proj = a_proj_data.data;
+
+			// subtraction
+			for(size_t u = 0; u < U_data.n_len; u++) {
+				U[i][u] -= a_proj[u];
+			}
+
+			vector_free(a_proj_data);
+		}
+		// addition
+		for(size_t u = 0; u < U_data.n_len; u++) {
+			U[i][u] += A_t[i][u];
+		}
+	}
+	matrix_free(A_t_data);
+
+	//euclidean norm
+	for(size_t i = 0; i < U_data.m_len; i++) {
+		ml_data_type sum = 0;
+		for(size_t u = 0; u < U_data.n_len; u++) {
+			sum += U[i][u]*U[i][u];
+		}
+
+		ml_data_type eucl = sqrt(sum);
+		// normalize
+		for(size_t u = 0; u < U_data.n_len; u++) {
+			U[i][u] = U[i][u] / eucl;
+		}
+	}
+
+	matrix_data ret = matrix_transpose(U_data, 1);
+	matrix_free(U_data);
+	return ret;
+}
+
+matrix_data ml_project_axis(matrix_data A_data, matrix_data V_t) {
+	matrix_data B_data = matrix_mult(A_data, V_t);
+	return B_data;
+}
+
 matrix_data ml_matrix_normalize(matrix_data A_data) {
 
 	matrix_t A = A_data.data;
 	for (size_t i = 0; i < A_data.n_len; i++) {
-		ml_data_type sd = 0.0, mean = 0.0, sum = 0.0;
+		ml_data_type sd = 0.0, mean = 0.0;
+		double sum = 0.0;
 
 		for (size_t j = 0; j < A_data.m_len; j++) {
 			sum += A[j][i];
@@ -53,7 +143,11 @@ matrix_data ml_matrix_normalize(matrix_data A_data) {
 		for (size_t j = 0; j < A_data.m_len; j++) {
 			sum += (A[j][i] - mean) * (A[j][i] - mean);
 		}
-		sd = sqrt(sum / A_data.m_len);
+		if(sum > 0.0) {
+			sd = sqrt(sum / A_data.m_len);
+		} else {
+			sd = 1.0;
+		}
 
 		for (size_t j = 0; j < A_data.m_len; j++) {
 			A[j][i] = (A[j][i] - mean) / sd;
@@ -63,14 +157,18 @@ matrix_data ml_matrix_normalize(matrix_data A_data) {
 	return A_data;
 }
 
-void ml_svd(matrix_data A_data, matrix_data *U_out, vector_data *W_out, matrix_data *V_out) {
+
+
+svd_uwv ml_svd(matrix_data A_data) {
 	vector_data w_data = vector_data_mem_init(A_data.n_len, 0);
 	matrix_data V_data = matrix_data_mem_init(A_data.n_len, A_data.n_len, 0);
-	matrix_print(A_data, "A");
 
 	svdcmp((float**)A_data.data, A_data.m_len, A_data.n_len, w_data.data, V_data.data);
-	vector_print(w_data, "W");
-	matrix_print(V_data, "V");
+	svd_uwv out;
+	out.U = A_data;
+	out.W = w_data;
+	out.V = V_data;
+	return out;
 }
 
 static void svdcmp(float **a, int m, int n, float w[], float **v) {
@@ -217,7 +315,7 @@ static void svdcmp(float **a, int m, int n, float w[], float **v) {
 				break;
 			}
 			if (its == 30)
-				printf("no convergence in 30 svdcmp iterations");
+				printf("no convergence in 30 svdcmp iterations\n");
 			x = w[l-1];
 			nm = k - 1;
 			y = w[nm-1];
