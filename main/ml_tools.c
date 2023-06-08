@@ -127,30 +127,37 @@ matrix_data ml_project_axis(matrix_data A_data, matrix_data V_t) {
 	return B_data;
 }
 
-matrix_data ml_matrix_normalize(matrix_data A_data) {
-
+matrix_data ml_matrix_normalize(matrix_data A_data, vector_data mean_out, vector_data sd_out) {
 	matrix_t A = A_data.data;
 	for (size_t i = 0; i < A_data.n_len; i++) {
 		ml_data_type sd = 0.0, mean = 0.0;
 		double sum = 0.0;
 
-		for (size_t j = 0; j < A_data.m_len; j++) {
-			sum += A[j][i];
-		}
-		mean = sum / A_data.m_len;
-
-		sum = 0.0;
-		for (size_t j = 0; j < A_data.m_len; j++) {
-			sum += (A[j][i] - mean) * (A[j][i] - mean);
-		}
-		if(sum > 0.0) {
-			sd = sqrt(sum / A_data.m_len);
-		} else {
-			sd = 1.0;
+		if(mean_out.data == NULL) {
+			mean_out = vector_data_mem_init(A_data.n_len, 0);
+			sd_out = vector_data_mem_init(A_data.n_len, 0);
 		}
 
+		if(sd_out.data[i] == 0.0) {
+			for (size_t j = 0; j < A_data.m_len; j++) {
+				sum += A[j][i];
+			}
+			mean = sum / A_data.m_len;
+			mean_out.data[i] = mean;
+
+			sum = 0.0;
+			for (size_t j = 0; j < A_data.m_len; j++) {
+				sum += (A[j][i] - mean) * (A[j][i] - mean);
+			}
+			if(sum > 0.0) {
+				sd = sqrt(sum / A_data.m_len);
+			} else {
+				sd = 1.0;
+			}
+			sd_out.data[i] = sd;
+		}
 		for (size_t j = 0; j < A_data.m_len; j++) {
-			A[j][i] = (A[j][i] - mean) / sd;
+			A[j][i] = (A[j][i] - mean_out.data[i]) / sd_out.data[i];
 		}
 
 	}

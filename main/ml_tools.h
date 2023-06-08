@@ -21,7 +21,7 @@ typedef struct{
 matrix_data ml_calc_R(matrix_data Q_data, matrix_data A_data);
 matrix_data ml_calc_Q(matrix_data A_data);
 matrix_data ml_project_axis(matrix_data A_data, matrix_data V_t);
-matrix_data ml_matrix_normalize(matrix_data A_data);
+matrix_data ml_matrix_normalize(matrix_data A_data, vector_data mean_out, vector_data sd_out);
 svd_uwv ml_svd(matrix_data A_data);
 
 

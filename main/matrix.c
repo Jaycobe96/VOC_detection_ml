@@ -73,6 +73,22 @@ matrix_data matrix_data_mem_copy(matrix_data A_data) {
 	return matrix_to_matrix_data(A, A_data.n_len, A_data.m_len);
 }
 
+matrix_data matrix_data_m_concatenate(matrix_data A_data, matrix_data B_data) {
+	matrix_data C_data = matrix_data_mem_init(A_data.n_len, A_data.m_len + B_data.m_len, 0);
+	matrix_t C = C_data.data;
+	for(size_t u = 0; u < C_data.m_len; u++) {
+		for(size_t i = 0; i < C_data.n_len; i++) {
+			if(u < A_data.m_len) {
+				C[u][i] = A_data.data[u][i];
+			} else {
+				C[u][i] = B_data.data[u - A_data.m_len][i];
+			}
+		}
+	}
+	return C_data;
+
+}
+
 matrix_t matrix_mem_init(size_t n_len, size_t m_len, int32_t val_init) {
 	const char* err_msg = "Error while allocating matrix\n";
 	const size_t col_size = sizeof(ml_data_type*) * m_len;

@@ -77,6 +77,10 @@ vector_data matrix_data_to_vector_data(matrix_data A_data, size_t at, uint8_t co
 	return v_data;
 }
 
+/**
+ * copy v2 to v1 if vectors have same lengths
+ * returns v1 if vectors have same lengths
+ */
 vector_data vector_copy(vector_data v1_data, vector_data v2_data) {
 	vector_t v_first, v_second;
 	size_t n_len;

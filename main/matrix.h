@@ -18,6 +18,7 @@ void matrix_print(matrix_data A_data, const char* A_name);
 void matrix_free(matrix_data A_data);
 matrix_t matrix_mem_copy(matrix_data A_data);
 matrix_data matrix_data_mem_copy(matrix_data A_data);
+matrix_data matrix_data_m_concatenate(matrix_data A_data, matrix_data B_data);
 matrix_t matrix_mem_init(size_t n_len, size_t m_len, int32_t val_init);
 matrix_data matrix_data_mem_init(size_t n_len, size_t m_len, int32_t val_init);
 matrix_data vector_data_to_matrix_data(vector_data v, uint8_t copy);
